@@ -5,7 +5,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-
 const users = [];
 const tasks = {
   'Iniciante': [
@@ -63,7 +62,7 @@ app.post('/login', (req, res) => {
   }
 });
 
-//(esqueci Minha Senha)
+// (Esqueci minha senha)
 app.post('/forgot-password', (req, res) => {
   const { email } = req.body;
   const user = users.find(u => u.email === email);
@@ -75,7 +74,7 @@ app.post('/forgot-password', (req, res) => {
   }
 });
 
-//(redefinir Senha)
+// (Redefinir senha)
 app.post('/reset-password', (req, res) => {
   const { email, newPassword } = req.body;
   const user = users.find(u => u.email === email);
@@ -87,7 +86,7 @@ app.post('/reset-password', (req, res) => {
   }
 });
 
-//(reenviar Link de Redefinição)
+// (Reenviar link de redefinição)
 app.post('/resend-reset-link', (req, res) => {
   const { email } = req.body;
   const user = users.find(u => u.email === email);
@@ -99,14 +98,14 @@ app.post('/resend-reset-link', (req, res) => {
   }
 });
 
-//(criar portfólio)
+// (Criar portfólio)
 app.post('/portfolio', (req, res) => {
   const { userId, projects } = req.body;
   portfolio.push({ userId, projects });
   res.json({ message: 'Portfólio criado com sucesso' });
 });
 
-//(modos e tarefas)
+// (Modos e tarefas)
 app.get('/modes', (req, res) => {
   res.json({
     modes: [
@@ -122,7 +121,7 @@ app.get('/modes/:modeId/tasks', (req, res) => {
   res.json({ tasks: tasks[modeId] || [] });
 });
 
-//(botão "feito" - marcar tarefa como concluída)
+// (Botão "feito" - marcar tarefa como concluída)
 app.post('/tasks/:taskId/done', (req, res) => {
   const { taskId } = req.params;
   const task = Object.values(tasks).flat().find(t => t.id === parseInt(taskId));
@@ -133,7 +132,7 @@ app.post('/tasks/:taskId/done', (req, res) => {
   }
 });
 
-//(botão "resolução" - mostrar código da tarefa)
+// (Botão "resolução" - mostrar código da tarefa)
 app.get('/tasks/:taskId/solution', (req, res) => {
   const { taskId } = req.params;
   const task = Object.values(tasks).flat().find(t => t.id === parseInt(taskId));
@@ -146,5 +145,107 @@ app.get('/tasks/:taskId/solution', (req, res) => {
   }
 });
 
-//(Iniciar servidor)
+// (Alterar Email)
+app.post('/account/:userId/update-email', (req, res) => {
+  const { userId } = req.params;
+  const { newEmail } = req.body;
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user) {
+    user.email = newEmail;
+    sendEmail(user.email, 'Alteração de Email', 'Clique aqui para confirmar a alteração do seu email');
+    res.json({ message: 'Link de confirmação para alteração de email enviado para seu endereço de email' });
+  } else {
+    res.status(400).json({ message: 'Erro: Usuário não encontrado' });
+  }
+});
+
+// (Alterar Telefone)
+app.post('/account/:userId/update-phone', (req, res) => {
+  const { userId } = req.params;
+  const { newPhone } = req.body;
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user) {
+    user.telefone = newPhone;
+    sendEmail(user.email, 'Alteração de Telefone', 'Clique aqui para confirmar a alteração do seu número de telefone');
+    res.json({ message: 'Link de confirmação para alteração de telefone enviado para seu endereço de email' });
+  } else {
+    res.status(400).json({ message: 'Erro: Usuário não encontrado' });
+  }
+});
+
+// (Alterar Idioma)
+app.post('/account/:userId/update-language', (req, res) => {
+  const { userId } = req.params;
+  const { language } = req.body; // 'port', 'en', 'es'
+
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user) {
+    user.language = language;
+    sendEmail(user.email, 'Confirmar alteração de idioma', `Clique aqui para confirmar a alteração do seu idioma para ${language}.`);
+    res.json({ message: 'Link de confirmação enviado para seu e-mail.' });
+  } else {
+    res.status(400).json({ message: 'Erro: Usuário não encontrado' });
+  }
+});
+
+// (Procurar Membro)
+app.get('/account/:userId/search-member', (req, res) => {
+  const { userId } = req.params;
+  const { searchQuery } = req.query; // Nome ou e-mail do membro a ser procurado
+
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user) {
+    const foundUsers = users.filter(u => u.nome.includes(searchQuery) || u.email.includes(searchQuery));
+    res.json({ members: foundUsers });
+  } else {
+    res.status(400).json({ message: 'Erro: Usuário não encontrado' });
+  }
+});
+
+// (Adicionar Membro)
+app.post('/account/:userId/add-member', (req, res) => {
+  const { userId } = req.params;
+  const { memberId } = req.body; // ID do membro a ser adicionado
+
+  const user = users.find(u => u.id === parseInt(userId));
+  const memberToAdd = users.find(u => u.id === parseInt(memberId));
+
+  if (user && memberToAdd) {
+    user.members = user.members || [];
+    user.members.push(memberToAdd);
+    res.json({ message: 'Membro adicionado com sucesso' });
+  } else {
+    res.status(400).json({ message: 'Erro: Usuário ou Membro não encontrado' });
+  }
+});
+
+// (Confirmar Alteração de Email)
+app.post('/account/:userId/confirm-email', (req, res) => {
+  const { userId } = req.params;
+  const { confirmationCode } = req.body;
+
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user && confirmationCode) {
+    user.emailConfirmed = true;
+    res.json({ message: 'Alteração de email confirmada com sucesso' });
+  } else {
+    res.status(400).json({ message: 'Erro: Código de confirmação inválido ou usuário não encontrado' });
+  }
+});
+
+// (Confirmar Alteração de Telefone)
+app.post('/account/:userId/confirm-phone', (req, res) => {
+  const { userId } = req.params;
+  const { confirmationCode } = req.body;
+
+  const user = users.find(u => u.id === parseInt(userId));
+  if (user && confirmationCode) {
+    user.phoneConfirmed = true;
+    res.json({ message: 'Alteração de telefone confirmada com sucesso' });
+  } else {
+    res.status(400).json({ message: 'Erro: Código de confirmação inválido ou usuário não encontrado' });
+  }
+});
+
+// (Iniciar servidor)
 app.listen(3000, () => console.log('Servidor iniciado na porta 3000.'));
