@@ -1,52 +1,55 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+//======================================
+const mongoose = require('mongoose');
+var cors = require('cors');
+//======================================
+mongoose.connect('mongodb+srv://eduardo61772:jIqrrkpKT5TwtZUm@cluster0.dvl2l.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+.then(() => {
+  console.log('conectado ao mongo');
+})
+.catch((err) => {
+  console.error('erro', err.message);
+});
+//======================================
 const app = express();
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public'));
+//======================================
+const userController = require('./controllers/UserController');
+// rotas
 
-const users = [];
-const tasks = {
-  'Iniciante': [
-    { id: 1, description: 'Hello Word' },
-    { id: 2, description: 'Calculadora' },
-    { id: 3, description: 'Conversor de temperatura' }
-  ],
-  'Intermediário': [
-    { id: 4, description: 'Número primo' },
-    { id: 5, description: 'a definir' },
-    { id: 6, description: 'a definir' }
-  ],
-  'Avançado': [
-    { id: 7, description: 'a definir' },
-    { id: 8, description: 'a definir' },
-    { id: 9, description: 'a definir' }
-  ]
-};
+// store
+app.post('/store', userController.store);
+// destroy
+app.delete('/user/:id', userController.destroy);
+// update
+app.put('/user/:id', userController.update);
+// show
+app.get('/show', userController.show);
+// show (email)
+// ex: /show/email/?email=vc@gmail.com
+app.get('/show/email/*', userController.showe);
 
-const portfolio = [];
-
-//(token simples)
-const generateToken = () => 'jwt-token-here';
-
-//(envio de e-mail)
-const sendEmail = (email, subject, message) => {
-  console.log(`Email enviado para ${email}: ${subject} - ${message}`);
-};
-
-//(rotas)
+// main page
 app.get('/', (req, res) => {
-  res.send('Bem-vindo ao DevClass');
+  res.send('hello');
 });
 
-// (Sign Up)
-app.post('/signup', (req, res) => {
-  const { nome, email, password, telefone } = req.body;
-  const newUser = { id: users.length + 1, nome, email, password, telefone };
-  users.push(newUser);
-  res.json({ message: 'Cadastro feito com sucesso', userId: newUser.id });
+// modos e tarefas
+app.get('/modes', (req, res) => {
+  res.json({
+    modes: [
+      { id: 'Iniciante' },
+      { id: 'Intermediário' },
+      { id: 'Avançado' }
+    ]
+  });
 });
 
+
+/*
 // (Login)
 app.post('/login', (req, res) => {
   const { email, password, lembrarMe } = req.body;
@@ -103,17 +106,6 @@ app.post('/portfolio', (req, res) => {
   const { userId, projects } = req.body;
   portfolio.push({ userId, projects });
   res.json({ message: 'Portfólio criado com sucesso' });
-});
-
-// (Modos e tarefas)
-app.get('/modes', (req, res) => {
-  res.json({
-    modes: [
-      { id: 'Iniciante' },
-      { id: 'Intermediário' },
-      { id: 'Avançado' }
-    ]
-  });
 });
 
 app.get('/modes/:modeId/tasks', (req, res) => {
@@ -247,5 +239,7 @@ app.post('/account/:userId/confirm-phone', (req, res) => {
   }
 });
 
-// (Iniciar servidor)
-app.listen(3000, () => console.log('Servidor iniciado na porta 3000.'));
+*/
+
+// iniciar server
+app.listen(3000, () => console.log('iniciado (3000)'));
